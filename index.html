@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мобильность Одинцово | Интеллектуальный AI-ассистент маршрутов</title>
+    <link rel="icon" href="data:,">
+
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=7bdba573-e565-48d0-b4ce-a4f67d59a597&lang=ru_RU&load=package.full" type="text/javascript"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="main-container">
+        <header class="header">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h1 class="h4 mb-1"><i class="fas fa-route me-2 text-warning"></i>Odintsovo Route Intelligence</h1>
+                    <p class="mb-0 small opacity-90">
+                        Интеллектуальный поиск оптимальных маршрутов с учётом дорожной обстановки.
+                    </p>
+                </div>
+                <div class="text-end header-badges">
+                    <div class="small"><i class="fas fa-brain me-1"></i>AI-маршруты · Аналитика · Городская карта</div>
+                    <div class="small mt-1"><i class="fas fa-chart-line me-1"></i>Прогноз дорожной ситуации · Умная навигация</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="content-row">
+            <aside class="panel" id="control-panel">
+                <h5 class="panel-title"><i class="fas fa-sliders-h"></i>Параметры маршрута</h5>
+
+                <section class="route-panel compact-panel">
+                    <div class="section-header compact-header">
+                        <h6><i class="fas fa-search me-1"></i>Поиск и точки маршрута</h6>
+                        <span class="badge-soft">Рабочая зона</span>
+                    </div>
+
+                    <div class="search-box mb-2">
+                        <div class="suggest-field flex-grow-1">
+                            <input type="text" class="form-control form-control-sm" id="search-place" placeholder="Введите адрес, объект или организацию в рабочей зоне">
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" id="search-as-a" title="Установить как точку отправления"><i class="fas fa-map-pin"></i> A</button>
+                        <button class="btn btn-sm btn-outline-secondary" id="search-as-b" title="Установить как точку назначения"><i class="fas fa-map-pin"></i> B</button>
+                    </div>
+
+                    <div class="small text-muted helper-line mb-2">
+                        Выпадающий список отключён: для точности введите адрес или название места и нажмите Enter либо кнопку A/B.
+                    </div>
+
+                    <div class="route-point point-armed" id="point-row-a" data-point-target="A">
+                        <div class="route-point-marker start-marker">A</div>
+                        <div class="route-point-body">
+                            <div class="route-point-title">Точка отправления</div>
+                            <div class="suggest-field">
+                                <input type="text" class="form-control form-control-sm route-input" id="route-start" placeholder="Откуда">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="route-point" id="point-row-b" data-point-target="B">
+                        <div class="route-point-marker end-marker">B</div>
+                        <div class="route-point-body">
+                            <div class="route-point-title">Точка назначения</div>
+                            <div class="suggest-field">
+                                <input type="text" class="form-control form-control-sm route-input" id="route-end" placeholder="Куда">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="transport-buttons" id="route-mode-buttons">
+                        <button class="transport-btn active" data-route="auto">🚗 Авто</button>
+                        <button class="transport-btn" data-route="pedestrian">🚶 Пешком</button>
+                    </div>
+
+                    <div class="compact-settings-grid mt-2">
+                        <div class="d-none" aria-hidden="true">
+                            <label class="form-label small mb-1" for="optimization-goal">Стратегия</label>
+                            <select class="form-select form-select-sm" id="optimization-goal">
+                                <option value="fastest">Быстрее добраться</option>
+                                <option value="optimal" selected>AI-оптимизация маршрута</option>
+                            </select>
+                        </div>
+
+                        <div class="toggle-card compact-toggle">
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="multiroute-toggle" checked>
+                                <label class="form-check-label" for="multiroute-toggle">Альтернативные маршруты</label>
+                            </div>
+                            <div class="small text-muted mt-1">До 5 вариантов маршрута при наличии альтернатив на карте.</div>
+                        </div>
+
+                        <div class="d-none" aria-hidden="true">
+                            <input class="form-check-input" type="checkbox" role="switch" id="traffic-overlay-toggle" checked>
+                        </div>
+                    </div>
+
+                    <div class="action-row mt-2">
+                        <button class="btn btn-primary btn-sm flex-grow-1" id="btn-build-route"><i class="fas fa-route me-1"></i>Построить</button>
+                        <button class="btn btn-outline-primary btn-sm" id="btn-apply-optimal" title="Выбрать лучший маршрут из альтернатив"><i class="fas fa-wand-magic-sparkles me-1"></i>Оптимальный</button>
+                        
+                    </div>
+
+                    <div id="selected-points-info" class="point-info small text-muted mt-2">Укажите точки отправления и назначения.</div>
+                </section>
+
+                <div class="compact-tabs" id="panel-tabs">
+                    <button class="compact-tab active" data-panel="result">Результат</button>
+                    <button class="compact-tab" data-panel="insights">Аналитика</button>
+                    <button class="compact-tab" data-panel="alternatives">Альтернативы</button>
+                </div>
+
+                <section id="route-result" class="info-card tab-section">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span id="route-mode-label" class="badge bg-primary">🚗 Автомобиль</span>
+                        <span class="small text-muted">Активный маршрут</span>
+                    </div>
+                    <div class="metrics-grid two-cols compact-metrics">
+                        <div><div class="metric-label">Расстояние</div><div id="route-distance" class="metric-value">—</div></div>
+                        <div><div class="metric-label">Время</div><div id="route-time" class="metric-value">—</div></div>
+                        <div><div class="metric-label">Прибытие</div><div id="route-arrival" class="metric-value small-value">—</div></div>
+                        <div><div class="metric-label">Пробки</div><div id="route-delay" class="metric-value small-value">—</div></div>
+                    </div>
+                </section>
+
+                <section id="insights-card" class="info-card tab-section d-none">
+                    <div class="section-header compact-header">
+                        <h6><i class="fas fa-lightbulb me-1"></i>Сравнение и оптимизация</h6>
+                        <span id="traffic-badge" class="badge bg-secondary">Загрузка: —</span>
+                    </div>
+                    <div class="metrics-grid compact-metrics">
+                        <div class="metric-box"><div class="metric-label">🚗 Авто</div><div id="auto-summary" class="metric-value small-value">—</div></div>
+                        <div class="metric-box"><div class="metric-label">🚶 Пешком</div><div id="walk-summary" class="metric-value small-value">—</div></div>
+                    </div>
+                    <div class="insight-line"><span class="metric-label">Рекомендация</span><div id="recommendation-text" class="insight-text">—</div></div>
+                    <div class="d-none" aria-hidden="true"><div id="last-mile-text">—</div></div>
+                </section>
+
+                <section id="alternatives-card" class="info-card tab-section d-none">
+                    <div class="section-header compact-header">
+                        <div>
+                            <h6><i class="fas fa-layer-group me-1"></i><span id="alternatives-title">Альтернативные маршруты</span></h6>
+                            <!-- <div id="alternatives-note" class="small text-muted">Выберите вручную один из вариантов или нажмите кнопку «Оптимальный».</div> -->
+                        <!-- </div>
+                        <span class="badge badge-pro">Коммерческий потенциал</span>
+                    </div> -->
+                    <div id="alternatives-list" class="alternatives-list compact-alternatives"></div>
+                </section>
+            </aside>
+
+            <div class="panel-splitter" id="splitter-left" aria-hidden="true" title="Изменить ширину левой панели"></div>
+
+            <section class="panel" id="map-container">
+                <h5 class="panel-title"><i class="fas fa-map"></i>Карта маршрутов</h5>
+                <div class="map-shell">
+                    <div id="map"></div>
+                </div>
+                <div class="map-stats">
+                    <span id="traffic-status"><i class="fas fa-road me-1"></i>Трафик: —</span>
+                    <span><i class="far fa-clock me-1"></i><span id="current-time-display">--:--</span></span>
+                    <span class="d-none" id="map-zoom"><i class="fas fa-search-plus me-1"></i>14</span>
+                </div>
+            </section>
+
+            <div class="panel-splitter" id="splitter-right" aria-hidden="true" title="Изменить ширину правой панели"></div>
+
+            <aside class="panel" id="assistant-panel">
+                <h5 class="panel-title"><i class="fas fa-comments"></i>AI-помощник</h5>
+
+                <div class="assistant-panel-scroll">
+                <div class="assistant-summary compact-summary">
+                    <div class="summary-chip" id="summary-chip-mode">Режим: авто</div>
+                    <div class="summary-chip" id="summary-chip-goal">AI-режим: оптимизация</div>
+                    <div class="summary-chip" id="summary-chip-status">Статус: ожидание маршрута</div>
+                </div>
+
+                <div id="ai-chat">
+                    <div class="chat-message ai-message">
+                        <strong>AI-помощник</strong>
+                        <span>Постройте маршрут, и я помогу сравнить варианты, оценить дорожную обстановку и выбрать подходящий путь.</span>
+                    </div>
+                </div>
+
+                <div class="assistant-upload mt-2">
+                    <label for="ai-image-input" class="form-label small mb-1">
+                        <i class="fas fa-image me-1"></i>Прикрепить изображение маршрута или карты
+                    </label>
+                    <input type="file" class="form-control form-control-sm" id="ai-image-input" accept="image/*">
+
+                    <div id="ai-image-preview" class="assistant-upload-preview d-none">
+                        <img id="ai-image-thumb" class="assistant-upload-thumb" alt="Предпросмотр изображения">
+                        <div class="assistant-upload-meta">
+                            <div id="ai-image-name" class="assistant-upload-name">Файл не выбран</div>
+                            <button class="btn btn-outline-secondary btn-sm" id="btn-ai-clear-image" type="button">Убрать</button>
+                        </div>
+                    </div>
+
+                    <div id="assistant-status-line" class="assistant-status-line d-none"></div>
+
+
+
+                    <details id="assistant-debug-panel" class="assistant-debug-panel d-none">
+                <summary>Технический debug ассистента</summary>
+
+                <div class="assistant-debug-grid">
+                    <div><strong>request_id:</strong> <span id="assistant-debug-request-id">—</span></div>
+                    <div><strong>intent:</strong> <span id="assistant-debug-intent">—</span></div>
+                    <div><strong>response_mode:</strong> <span id="assistant-debug-response-mode">—</span></div>
+                </div>
+            
+                <div class="assistant-debug-block">
+                    <div class="assistant-debug-title">Context summary</div>
+                    <pre id="assistant-debug-context">—</pre>
+                </div>
+            
+                <div class="assistant-debug-block">
+                    <div class="assistant-debug-title">Classifier debug</div>
+                    <pre id="assistant-debug-classifier">—</pre>
+                </div>
+            
+                <div class="assistant-debug-block">
+                    <div class="assistant-debug-title">Resolver debug</div>
+                    <pre id="assistant-debug-resolver">—</pre>
+                </div>
+            
+                <div class="assistant-debug-block">
+                    <div class="assistant-debug-title">Backend debug</div>
+                    <pre id="assistant-debug-backend">—</pre>
+                </div>
+            
+                <div class="assistant-debug-block">
+                    <div class="assistant-debug-title">Raw response</div>
+                    <pre id="assistant-debug-raw">—</pre>
+                </div>
+                    </details>
+                </div>
+
+
+                
+                <div class="input-group input-group-sm mt-2 assistant-input-group">
+                    <input type="text" class="form-control" id="ai-input" placeholder="Например: какой маршрут сейчас оптимальный?">
+
+                    <button
+                        class="btn btn-outline-secondary"
+                        id="btn-ai-voice"
+                        type="button"
+                        title="Голосовой ввод"
+                        aria-label="Голосовой ввод"
+                    >
+                        <i class="fas fa-microphone"></i>
+                    </button>
+
+                    <button class="btn btn-primary" id="btn-ai-ask" type="button" title="Отправить">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+
+                <div class="hint-list mt-3 compact-hints">
+                    <button class="hint-btn" type="button">Сравнить авто и пешком</button>
+                    <button class="hint-btn" type="button">Какой маршрут сейчас лучший?</button>
+                    <button class="hint-btn" type="button">Есть ли сейчас перегрузка дорог?</button>
+                    <button class="hint-btn" type="button">Открой альтернативы</button>
+                    <button class="hint-btn" type="button">Очисти маршрут</button>
+                    <button class="hint-btn" type="button">Покажи пробки</button>
+                    <button class="hint-btn" type="button">Привет</button>
+                </div>
+                </div>
+            </aside>
+        </div>
+
+        <footer class="footer-panel developer-footer premium-footer">
+            <div class="developer-contacts premium-footer-content">
+                <div class="footer-metric-pill" aria-label="Пользователи на сайте">
+                    <div class="footer-metric-icon" aria-hidden="true">👥</div>
+                    <div class="footer-metric-main">
+                        <div class="footer-metric-counter-row">
+                            <div id="visitor-counter" class="footer-metric-counter">0</div>
+                            <div class="footer-metric-caption">на сайте</div>
+                        </div>
+                        <div class="footer-metric-live">
+                            <span class="metric-live-dot"></span>
+                            <span id="metric-live-label">подключение…</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer-developer-block">
+                    
+
+                    <div class="developer-links premium-links">
+                        <div class="footer-developer-label">Контакты разработчика:</div>
+                        <a href="https://t.me/PlusVibe_pers" class="developer-link premium-link" target="_blank" rel="noopener noreferrer">
+                            <i class="fab fa-telegram-plane"></i>
+                            <span>Telegram</span>
+                        </a>
+
+                        <a href="https://vk.com/id633411771" class="developer-link premium-link" target="_blank" rel="noopener noreferrer">
+                            <i class="fab fa-vk"></i>
+                            <span>ВКонтакте</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-system-state d-none" aria-hidden="true">
+                <span id="footer-route-status">Маршрут не построен</span>
+                <span id="footer-last-mile">Последняя миля: нет данных</span>
+                <span id="footer-traffic">Трафик: —</span>
+                <span id="footer-premium">Альтернативные маршруты</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
